@@ -14,13 +14,11 @@ use Required\CustomMenuItemTypes\Walker\NavMenuEditWithCustomItemTypes;
  */
 class Custom_Menu_Items {
 
-	/**
-	 * Add menu meta box
-	 */
+	// Add menu meta box
 	public function add_meta_box() {
 		add_meta_box(
 			'r_custom_item_types',
-			__( 'Custom Menu Item Types', 'custom-menu-item-types' ),
+			__( 'Custom Menu Objects', 'custom-menu-item-types' ),
 			array( $this, 'r_custom_item_types' ),
 			'nav-menus',
 			'side',
@@ -28,48 +26,61 @@ class Custom_Menu_Items {
 		);
 	}
 
-	/**
-	 * Change item label depending on the link
-	 */
+	// Change item label and object depending on the type
 	public function customize_menu_item_label( $menu_item ) {
-		if ( 'custom' !== $menu_item->type ) {
-			return $menu_item;
-		}
-
-		switch ( $menu_item->url ) {
-			case '#line_break':
-				$menu_item->type_label = __( 'Separator', 'custom-menu-item-types' );
+		
+		switch( $menu_item->type ) {
+				
+			case 'row':
+				$menu_item->type_label = __( 'Row', 'custom-menu-item-types');
+				$menu_item->object = 'row';
 				break;
-			case '#column_end':
-				$menu_item->type_label = __( 'Column End', 'custom-menu-item-types' );
+				
+			case 'column':
+				$menu_item->type_label = __( 'Column', 'custom-menu-item-types');
+				$menu_item->object = 'column';
+				$menu_item->column  = $menu_item->column ?? get_post_meta( $menu_item->ID, '_menu_item_column', true );
 				break;
-			case '#custom_headline':
-				$menu_item->type_label = __( 'Headline', 'custom-menu-item-types' );
+				
+			case 'heading':
+				$menu_item->type_label = __( 'Heading', 'custom-menu-item-types');
+				$menu_item->object = 'heading';
 				break;
-		}
-
-		$menu_item->rcmit_type          = $menu_item->rcmit_type ?? get_post_meta( $menu_item->ID, '_menu_item_rcmit_type', true );
-		$menu_item->rcmit_button_text   = $menu_item->rcmit_button_text ?? get_post_meta( $menu_item->ID, '_menu_item_rcmit_button_text', true );
-		$menu_item->rcmit_shortcode     = $menu_item->rcmit_shortcode ?? get_post_meta( $menu_item->ID, '_menu_item_rcmit_shortcode', true );
-		$menu_item->rcmit_column        = $menu_item->rcmit_column ?? get_post_meta( $menu_item->ID, '_menu_item_rcmit_column', true );
-		$menu_item->rcmit_heading_level = $menu_item->rcmit_heading_level ?? get_post_meta( $menu_item->ID, '_menu_item_rcmit_heading_level', true );
-
-		switch ( $menu_item->rcmit_type ) {
-			case 'highlight_box':
-				$menu_item->type_label = __( 'Highlight Box', 'custom-menu-item-types' );
+			
+			case 'button':
+				$menu_item->type_label = __( 'Button', 'custom-menu-item-types');
+				$menu_item->object = 'button';
+				$menu_item->btn_color = $menu_item->btn_color ?? get_post_meta( $menu_item->ID, '_menu_item_btn_color', true );
+				$menu_item->btn_style = $menu_item->btn_style ?? get_post_meta( $menu_item->ID, '_menu_item_btn_style', true );
 				break;
-			case 'newsletter_box':
-			case 'shortcode_box':
-				$menu_item->type_label = __( 'Shortcode Box', 'custom-menu-item-types' );
+			
+			case 'spacer':
+				$menu_item->type_label = __( 'Spacer', 'custom-menu-item-types');
+				$menu_item->object = 'spacer';
+				$menu_item->spacer_height = $menu_item->spacer_height ?? get_post_meta( $menu_item->ID, '_menu_item_spacer_height', true );
 				break;
+				
+			default:
+				return $menu_item;
 		}
 
 		return $menu_item;
+
 	}
 
 	public function nav_menu_start_el( $item_output, $item, $depth, $args ){
-		if ( 'custom' !== $item->type ) {
-			return $item_output;
+		
+		switch( $menu_item->type ) {
+				
+			case 'row':
+			case 'column':
+			case 'heading':
+			case 'button':
+				$item_output = '';
+				break;
+				
+			default:
+				return $item_output;
 		}
 
 		/** This filter is documented in wp-includes/post-template.php */
@@ -77,54 +88,10 @@ class Custom_Menu_Items {
 		/** This filter is documented in wp-includes\nav-menu-template.php */
 		$title = apply_filters( 'nav_menu_item_title', $title, $item, $args, $depth );
 
-		$item->rcmit_type        = $item->rcmit_type ?? get_post_meta( $item->ID, '_menu_item_rcmit_type', true );
-		$item->rcmit_button_text = $item->rcmit_button_text ?? get_post_meta( $item->ID, '_menu_item_rcmit_button_text', true );
-		$item->rcmit_shortcode   = $item->rcmit_shortcode ?? get_post_meta( $item->ID, '_menu_item_rcmit_shortcode', true );
-
-		switch ( $item->url ) {
-			case '#line_break':
-				$item_output = '<hr>';
-				break;
-			case '#column_end':
-				$item_output = '';
-				break;
-			case '#custom_headline':
-				$item_output = sprintf(
-					'<h%1$s>%2$s</h%1$s>',
-					$item->rcmit_heading_level ?: '4',
-					esc_html( $title )
-				);
-				break;
-		}
-
-		switch ( $item->rcmit_type ) {
-			case 'highlight_box':
-				$item_output = sprintf(
-					'%1$s<h%2$s>%3$s</h%2$s><p>%4$s</p><a class="button" href="%5$s">%6$s</a>%7$s',
-					$args->before,
-					$item->rcmit_heading_level ?: '4',
-					esc_html( $title ),
-					esc_html( $item->description ),
-					esc_url( $item->url ),
-					$args->link_before . esc_html( $item->rcmit_button_text ) . $args->link_after,
-					$args->after
-				);
-				break;
-			case 'newsletter_box':
-			case 'shortcode_box':
-				$item_output = sprintf(
-					'%1$s<div><h%2$s>%3$s</h%2$s><p>%4$s</p>%5$s</div>%6$s',
-					$args->before,
-					$item->rcmit_heading_level ?: '4',
-					esc_html( $title ),
-					esc_html( $item->description ),
-					do_shortcode( $item->rcmit_shortcode ),
-					$args->after
-				);
-				break;
-		}
+		$item->rcmit_type = $item->rcmit_type ?? get_post_meta( $item->ID, '_menu_item_rcmit_type', true );
 
 		return $item_output;
+
 	}
 
 	public function wp_edit_nav_menu_walker() {
@@ -145,161 +112,135 @@ class Custom_Menu_Items {
 	 * @return array Mapping of ID to the field paragraph HTML.
 	 */
 	public function nav_menu_item_fields( $nav_menu_item_fields, $context ) {
-		if ( 'custom' !== $context['item']->type ) {
-			return $nav_menu_item_fields;
-		}
+		
+		switch( $context['item']->type ) {
+				
+			case 'row':
+				unset(
+					$nav_menu_item_fields['url'],
+					$nav_menu_item_fields['css-classes'],
+					$nav_menu_item_fields['description'],
+					$nav_menu_item_fields['link-target'],
+					$nav_menu_item_fields['xfn']
+				);
+				break;
+				
+			case 'column':
+				unset(
+					$nav_menu_item_fields['url'],
+					$nav_menu_item_fields['css-classes'],
+					$nav_menu_item_fields['description'],
+					$nav_menu_item_fields['link-target'],
+					$nav_menu_item_fields['xfn']
+				);
 
-		switch ( $context['item']->url ) {
-			case '#column_end':
-				ob_start();
-				?>
+				ob_start(); ?>
 					<p class="field-column description description-wide">
 						<label for="edit-menu-item-column-<?php echo $context['item']->ID; ?>">
-							<?php _e( 'Width of next column', 'custom-menu-item-types' ); ?><br />
+							<?php _e( 'Width of column', 'custom-menu-item-types' ); ?><br />
 							<select name="menu-item-column[<?php echo $context['item']->ID; ?>]">
-								<option value="col-3" <?php selected( $context['item']->rcmit_column, 'col-3' ) ?>><?php _e( 'Col 3', 'custom-menu-item-types' ); ?></option>
-								<option value="col-4" <?php selected( $context['item']->rcmit_column, 'col-4' ) ?>><?php _e( 'Col 4', 'custom-menu-item-types' ); ?></option>
-								<option value="col-6" <?php selected( $context['item']->rcmit_column, 'col-6' ) ?>><?php _e( 'Col 6', 'custom-menu-item-types' ); ?></option>
+								<option value="col-lg-12" <?php selected( $context['item']->column, 'col-lg-12' ); ?>><?php _e( 'Full', 'custom-menu-item-types' ); ?></option>
+								<option value="col-lg-2" <?php selected( $context['item']->column, 'col-lg-2' ); ?>><?php _e( '1/6', 'custom-menu-item-types' ); ?></option>
+								<option value="col-lg-3" <?php selected( $context['item']->column, 'col-lg-3' ); ?>><?php _e( '1/4', 'custom-menu-item-types' ); ?></option>
+								<option value="col-lg-4" <?php selected( $context['item']->column, 'col-lg-4' ); ?>><?php _e( '1/3', 'custom-menu-item-types' ); ?></option>
+								<option value="col-lg-6" <?php selected( $context['item']->column, 'col-lg-6' ); ?>><?php _e( '1/2', 'custom-menu-item-types' ); ?></option>
 							</select>
 						</label>
 					</p>
-				<?php
-				$nav_menu_item_fields['column_width'] = ob_get_clean();
+				<?php $nav_menu_item_fields['column_width'] = ob_get_clean();
 				break;
-			case '#line_break':
-				unset( $nav_menu_item_fields['css-classes'] );
-
-				ob_start();
-				?>
-					<input type="hidden" id="edit-menu-item-title-<?php echo $context['item']->ID; ?>" class="widefat edit-menu-item-title" name="menu-item-title[<?php echo $context['item']->ID; ?>]" value="<?php echo esc_attr( $context['item']->title ); ?>" />
-				<?php
-				$nav_menu_item_fields['title'] = ob_get_clean();
+				
+			case 'heading':
+				unset(
+					$nav_menu_item_fields['url'],
+					$nav_menu_item_fields['css-classes'],
+					$nav_menu_item_fields['description'],
+					$nav_menu_item_fields['link-target'],
+					$nav_menu_item_fields['xfn']
+				);
 				break;
-			case '#custom_headline':
-				$nav_menu_item_fields = $this->header_dropdown( $nav_menu_item_fields, $context );
-				break;
-		}
-
-		if ( ! empty( $context['item']->rcmit_type ) ) {
-			// Migrate old type to new on-the-fly.
-			if ( 'newsletter_box' === $context['item']->rcmit_type ) {
-				$context['item']->rcmit_type = 'shortcode_box';
-			}
-			?>
-			<input class="menu-item-data-rcmit-type" type="hidden" name="menu-item-rcmit-type[<?php echo $context['item']->ID; ?>]" value="<?php echo $context['item']->rcmit_type; ?>" />
-			<?php
-			unset(
-				$nav_menu_item_fields['title'],
-				$nav_menu_item_fields['custom'],
-				$nav_menu_item_fields['attr-title'],
-				$nav_menu_item_fields['link-target'],
-				$nav_menu_item_fields['xfn']
-			);
-
-			$new_nav_menu_item_fields = array();
-			switch ( $context['item']->rcmit_type ) {
-				case 'highlight_box':
-					$nav_menu_item_fields = $this->header_dropdown( $nav_menu_item_fields, $context );
-					ob_start();
-					?>
-					<p class="field-title description description-wide">
-						<label for="edit-menu-item-title-<?php echo $context['item']->ID; ?>">
-							<?php _e( 'Box Header', 'custom-menu-item-types' ); ?><br />
-							<input type="text" id="edit-menu-item-title-<?php echo $context['item']->ID; ?>" class="widefat edit-menu-item-title" name="menu-item-title[<?php echo $context['item']->ID; ?>]" value="<?php echo esc_attr( $context['item']->title ); ?>" />
-						</label>
-					</p>
-					<?php
-					$new_nav_menu_item_fields['title'] = ob_get_clean();
-
-					ob_start();
-					?>
-					<p class="field-button-text description description-wide">
-						<label for="edit-menu-item-button-text-<?php echo $context['item']->ID; ?>">
-							<?php _e( 'Button Text', 'custom-menu-item-types' ); ?><br />
-							<input type="text" id="edit-menu-item-button-text-<?php echo $context['item']->ID; ?>" class="widefat code edit-menu-item-button-text" name="menu-item-button-text[<?php echo $context['item']->ID; ?>]" value="<?php echo esc_attr( $context['item']->rcmit_button_text ); ?>" />
-						</label>
-					</p>
-					<?php
-					$new_nav_menu_item_fields['button_text'] = ob_get_clean();
-
-					ob_start();
-					?>
+			
+			case 'button':
+				
+				unset(
+					$nav_menu_item_fields['title'],
+					$nav_menu_item_fields['css-classes'],
+					$nav_menu_item_fields['description'],
+					$nav_menu_item_fields['link-target'],
+					$nav_menu_item_fields['xfn']
+				);
+				
+				ob_start(); ?>
 					<p class="field-url description description-wide">
 						<label for="edit-menu-item-url-<?php echo $context['item']->ID; ?>">
-							<?php _e( 'Button URL', 'custom-menu-item-types' ); ?><br />
-							<input type="text" id="edit-menu-item-url-<?php echo $context['item']->ID; ?>" class="widefat code edit-menu-item-url" name="menu-item-url[<?php echo $context['item']->ID; ?>]" value="<?php echo esc_attr( $context['item']->url ); ?>" />
+							URL<br>
+							<input type="text" id="edit-menu-item-url-<?php echo $context['item']->ID; ?>" class="widefat code edit-menu-item-url" name="menu-item-url[<?php echo $context['item']->ID; ?>]" value="<?php echo $context['item']->url; ?>" placeholder="https://">
 						</label>
 					</p>
-					<?php
-					$new_nav_menu_item_fields['highlight_box'] = ob_get_clean();
-					$new_nav_menu_item_fields['description'] = $nav_menu_item_fields['description'];
-					break;
-				case 'shortcode_box':
-					$nav_menu_item_fields = $this->header_dropdown( $nav_menu_item_fields, $context );
-					ob_start();
-					?>
+				<?php $nav_menu_item_fields['url'] = ob_get_clean();
+				
+				ob_start(); ?>
 					<p class="field-title description description-wide">
 						<label for="edit-menu-item-title-<?php echo $context['item']->ID; ?>">
-							<?php _e( 'Header', 'custom-menu-item-types' ); ?><br />
-							<input type="text" id="edit-menu-item-title-<?php echo $context['item']->ID; ?>" class="widefat edit-menu-item-title" name="menu-item-title[<?php echo $context['item']->ID; ?>]" value="<?php echo esc_attr( $context['item']->title ); ?>" />
+							Button Text<br>
+							<input type="text" id="edit-menu-item-title-<?php echo $context['item']->ID; ?>" class="widefat edit-menu-item-title" name="menu-item-title[<?php echo $context['item']->ID; ?>]" value="<?php echo $context['item']->title; ?>">
 						</label>
 					</p>
-					<?php
-					$new_nav_menu_item_fields['title'] = ob_get_clean();
+				<?php $nav_menu_item_fields['title'] = ob_get_clean();
 
-					$new_nav_menu_item_fields['description'] = $nav_menu_item_fields['description'];
-
-					ob_start();
-					?>
-					<p class="field-shortcode description description-wide">
-						<label for="edit-menu-item-shortcode-<?php echo $context['item']->ID; ?>">
-							<?php _e( 'Shortcode', 'custom-menu-item-types' ); ?><br />
-							<input type="text" id="edit-menu-item-shortcode-<?php echo $context['item']->ID; ?>" class="widefat code edit-menu-item-shortcode" name="menu-item-shortcode[<?php echo $context['item']->ID; ?>]" value="<?php echo esc_attr( $context['item']->rcmit_shortcode ); ?>" />
+				ob_start(); ?>
+					<p class="field-btn-color description description-wide">
+						<label for="edit-menu-item-btn-color-<?php echo $context['item']->ID; ?>">
+							<?php _e( 'Button Color', 'custom-menu-item-types' ); ?><br />
+							<select name="menu-item-btn-color[<?php echo $context['item']->ID; ?>]">
+								<option value="btn-dark" <?php selected( $context['item']->btn_color, 'btn-dark' ); ?>><?php _e( 'Grey', 'custom-menu-item-types' ); ?></option>
+								<option value="btn-gold" <?php selected( $context['item']->btn_color, 'btn-gold' ); ?>><?php _e( 'Gold', 'custom-menu-item-types' ); ?></option>
+								<option value="btn-blue" <?php selected( $context['item']->btn_color, 'btn-blue' ); ?>><?php _e( 'Blue', 'custom-menu-item-types' ); ?></option>
+								<option value="btn-teal" <?php selected( $context['item']->btn_color, 'btn-teal' ); ?>><?php _e( 'Teal', 'custom-menu-item-types' ); ?></option>
+								<option value="btn-purple" <?php selected( $context['item']->btn_color, 'btn-purple' ); ?>><?php _e( 'Purple', 'custom-menu-item-types' ); ?></option>
+								<option value="btn-white" <?php selected( $context['item']->btn_color, 'btn-white' ); ?>><?php _e( 'White', 'custom-menu-item-types' ); ?></option>
+							</select>
 						</label>
 					</p>
-					<?php
-					$new_nav_menu_item_fields['shortcode_box_shortcode'] = ob_get_clean();
-					break;
-			}
+				<?php $nav_menu_item_fields['btn_color'] = ob_get_clean();
+				
+				ob_start(); ?>
+					<p class="field-btn-style description description-wide">
+						<label for="edit-menu-item-btn-style-<?php echo $context['item']->ID; ?>">
+							<?php _e( 'Button Style', 'custom-menu-item-types' ); ?><br />
+							<select name="menu-item-btn-style[<?php echo $context['item']->ID; ?>]">
+								<option value="btn-outline" <?php selected( $context['item']->btn_style, 'btn-outline' ); ?>><?php _e( 'Outline', 'custom-menu-item-types' ); ?></option>
+								<option value="btn-solid" <?php selected( $context['item']->btn_style, 'btn-solid' ); ?>><?php _e( 'Solid', 'custom-menu-item-types' ); ?></option>
+							</select>
+						</label>
+					</p>
+				<?php $nav_menu_item_fields['btn_style'] = ob_get_clean();
+				break;
+			case 'spacer':
+				unset(
+					$nav_menu_item_fields['url'],
+					$nav_menu_item_fields['css-classes'],
+					$nav_menu_item_fields['description'],
+					$nav_menu_item_fields['link-target'],
+					$nav_menu_item_fields['xfn']
+				);
 
-			$nav_menu_item_fields = array_merge( $new_nav_menu_item_fields, $nav_menu_item_fields );
+				ob_start(); ?>
+					<p class="field-spacer-height description description-wide">
+						<label for="edit-menu-item-spacer-height-<?php echo $context['item']->ID; ?>">
+							Spacer Height<br>
+							<input type="number" id="edit-menu-item-spacer-height-<?php echo $context['item']->ID; ?>" class="edit-menu-item-spacer-height" name="menu-item-spacer-height[<?php echo $context['item']->ID; ?>]" value="<?php echo $context['item']->spacer_height; ?>"> px
+						</label>
+					</p>
+				<?php $nav_menu_item_fields['spacer_height'] = ob_get_clean();
+				break;
+				
+			default:
+				 return $nav_menu_item_fields;
 		}
 
 		return $nav_menu_item_fields;
-	}
 
-	public function header_dropdown( $nav_menu_item_fields, $context ) {
-		unset(
-			$nav_menu_item_fields['attr-title'],
-			$nav_menu_item_fields['link-target'],
-			$nav_menu_item_fields['xfn'],
-			$nav_menu_item_fields['description']
-		);
-
-		ob_start();
-		?>
-			<input type="hidden" id="edit-menu-item-url-<?php echo $context['item']->ID; ?>" class="widefat code edit-menu-item-url" name="menu-item-url[<?php echo $context['item']->ID; ?>]" value="<?php echo esc_attr( $context['item']->url ); ?>" />
-		<?php
-		$nav_menu_item_fields['custom'] = ob_get_clean();
-
-		ob_start();
-		?>
-		<p class="field-heading-level description description-wide">
-			<label for="edit-menu-item-heading-level-<?php echo $context['item']->ID; ?>">
-				<?php _e( 'Heading level', 'custom-menu-item-types' ); ?><br />
-				<select name="menu-item-heading-level[<?php echo $context['item']->ID; ?>]">
-					<?php $heading_level = $context['item']->rcmit_heading_level ?: '4'; ?>
-					<option value="2" <?php selected( $heading_level, '2' ); ?>><?php _e( 'H2', 'custom-menu-item-types' ); ?></option>
-					<option value="3" <?php selected( $heading_level, '3' ); ?>><?php _e( 'H3', 'custom-menu-item-types' ); ?></option>
-					<option value="4" <?php selected( $heading_level, '4' ); ?>><?php _e( 'H4', 'custom-menu-item-types' ); ?></option>
-					<option value="5" <?php selected( $heading_level, '5' ); ?>><?php _e( 'H5', 'custom-menu-item-types' ); ?></option>
-					<option value="6" <?php selected( $heading_level, '6' ); ?>><?php _e( 'H6', 'custom-menu-item-types' ); ?></option>
-				</select>
-			</label>
-		</p>
-		<?php
-		$nav_menu_item_fields['heading_level'] = ob_get_clean();
-		return $nav_menu_item_fields;
 	}
 
 	public function customize_nav_menu_available_item_types( $item_types ) {
@@ -314,123 +255,130 @@ class Custom_Menu_Items {
 	 * @global int|string $nav_menu_selected_id
 	 */
 	public function r_custom_item_types() {
+
 		global $_nav_menu_placeholder, $nav_menu_selected_id;
-
-		$_nav_menu_placeholder = 0 > $_nav_menu_placeholder ? $_nav_menu_placeholder - 1 : -1;
-
-		?>
+		$_nav_menu_placeholder = 0 > $_nav_menu_placeholder ? $_nav_menu_placeholder - 1 : -1; ?>
 		<div class="posttypediv" id="custom-item-types">
 			<div id="tabs-panel-custom-item-types" class="tabs-panel tabs-panel-active">
 				<ul id ="custom-item-types-checklist" class="categorychecklist form-no-clear">
 					<li>
 						<label class="menu-item-title">
-							<input type="radio" class="menu-item-checkbox" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-object-id]" value="-1"> <?php _e( 'Column End', 'custom-menu-item-types' ); ?>
+							<input type="radio" class="menu-item-checkbox" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-object-id]" value="-1"> <?php _e( 'Row Break', 'custom-menu-item-types' ); ?>
 						</label>
-						<input type="hidden" class="menu-item-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" value="custom">
-						<input type="hidden" class="menu-item-title" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-title]" value="<?php _e( 'Column End', 'custom-menu-item-types' ); ?>">
-						<input type="hidden" class="menu-item-url" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-url]" value="#column_end">
+						<input type="hidden" class="menu-item-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" value="row">
+						<input type="hidden" class="menu-item-title" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-title]" value="<?php _e( 'Row Break', 'custom-menu-item-types' ); ?>">
+						<input type="hidden" class="menu-item-url" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-url]" value="">
 					</li>
 					<li>
 						<label class="menu-item-title">
-							<input type="radio" class="menu-item-checkbox" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-object-id]" value="-1"> <?php _e( 'Line Break', 'custom-menu-item-types' ); ?>
+							<input type="radio" class="menu-item-checkbox" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-object-id]" value="-1"> <?php _e( 'Column', 'custom-menu-item-types' ); ?>
 						</label>
-						<input type="hidden" class="menu-item-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" value="custom">
-						<input type="hidden" class="menu-item-title" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-title]" value="<?php _e( 'Separator', 'custom-menu-item-types' ); ?>">
-						<input type="hidden" class="menu-item-url" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-url]" value="#line_break">
+						<input type="hidden" class="menu-item-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" value="column">
+						<input type="hidden" class="menu-item-title" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-title]" value="<?php _e( 'Column', 'custom-menu-item-types' ); ?>">
+						<input type="hidden" class="menu-item-url" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-url]" value="">
 					</li>
 					<li>
 						<label class="menu-item-title">
-							<input type="radio" class="menu-item-checkbox" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-object-id]" value="-1"> <?php _e( 'Headline', 'custom-menu-item-types' ); ?>
+							<input type="radio" class="menu-item-checkbox" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-object-id]" value="-1"> <?php _e( 'Heading', 'custom-menu-item-types' ); ?>
 						</label>
-						<input type="hidden" class="menu-item-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" value="custom">
-						<input type="hidden" class="menu-item-title" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-title]" value="<?php _e( 'Headline', 'custom-menu-item-types' ); ?>">
-						<input type="hidden" class="menu-item-url" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-url]" value="#custom_headline">
+						<input type="hidden" class="menu-item-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" value="heading">
+						<input type="hidden" class="menu-item-title" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-title]" value="<?php _e( 'Heading', 'custom-menu-item-types' ); ?>">
+						<input type="hidden" class="menu-item-url" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-url]" value="">
 					</li>
 					<li>
 						<label class="menu-item-title">
-							<input type="radio" class="menu-item-checkbox" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-object-id]" value="-1"> <?php _e( 'Highlight Box', 'custom-menu-item-types' ); ?>
+							<input type="radio" class="menu-item-checkbox" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-object-id]" value="-1"> <?php _e( 'Button', 'custom-menu-item-types' ); ?>
 						</label>
-						<input type="hidden" class="menu-item-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" value="custom">
-						<input type="hidden" class="menu-item-rcmit-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-url]" value="highlight_box">
-						<input type="hidden" class="menu-item-title" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-title]" value="<?php _e( 'Highlight Box', 'custom-menu-item-types' ); ?>">
+						<input type="hidden" class="menu-item-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" value="button">
+						<input type="hidden" class="menu-item-title" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-title]" value="<?php _e( 'Button', 'custom-menu-item-types' ); ?>">
+						<input type="hidden" class="menu-item-url" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-url]" value="#">
 					</li>
 					<li>
 						<label class="menu-item-title">
-							<input type="radio" class="menu-item-checkbox" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-object-id]" value="-1"> <?php _e( 'Shortcode Box', 'custom-menu-item-types' ); ?>
+							<input type="radio" class="menu-item-checkbox" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-object-id]" value="-1"> <?php _e( 'Spacer', 'custom-menu-item-types' ); ?>
 						</label>
-						<input type="hidden" class="menu-item-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" value="custom">
-						<input type="hidden" class="menu-item-rcmit-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-url]" value="shortcode_box">
-						<input type="hidden" class="menu-item-title" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-title]" value="<?php _e( 'Shortcode Box', 'custom-menu-item-types' ); ?>">
+						<input type="hidden" class="menu-item-type" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" value="spacer">
+						<input type="hidden" class="menu-item-title" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-title]" value="<?php _e( 'Spacer', 'custom-menu-item-types' ); ?>">
+						<input type="hidden" class="menu-item-url" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-url]" value="">
+						<input type="hidden" class="menu-item-spacer-height" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-spacer-height]" value="20">
 					</li>
 				</ul>
 			</div>
 			<input type="hidden" value="custom" name="menu-item[<?php echo $_nav_menu_placeholder; ?>][menu-item-type]" />
-
 			<p class="button-controls wp-clearfix">
 				<span class="add-to-menu">
 					<input type="submit"<?php wp_nav_menu_disabled_check( $nav_menu_selected_id ); ?> class="button-secondary submit-add-to-menu right" value="<?php esc_attr_e( 'Add to Menu', 'custom-menu-item-types' ); ?>" name="add-custom-menu-item" id="submit-custom-item-types" />
 					<span class="spinner"></span>
 				</span>
 			</p>
-
 		</div><!-- /.custom-item-types -->
-		<?php
-	}
+	<?php }
 
 	public function wp_update_nav_menu_item( $menu_id = 0, $menu_item_db_id = 0, $args ) {
-		if ( ! current_user_can( 'edit_theme_options' ) ) {
-			return;
-		}
+
+		if( ! current_user_can( 'edit_theme_options' ) ) return;
 
 		// Add new menu item via ajax.
-		if ( isset( $_REQUEST['menu-settings-column-nonce'] ) && wp_verify_nonce( $_REQUEST['menu-settings-column-nonce'], 'add-menu_item' ) ) {
-			if ( ! empty( $_POST['menu-item']['-1']['menu-item-url'] ) && in_array( $_POST['menu-item']['-1']['menu-item-url'], array( 'shortcode_box', 'highlight_box' ) ) ) {
+		if( isset( $_REQUEST['menu-settings-column-nonce'] ) && wp_verify_nonce( $_REQUEST['menu-settings-column-nonce'], 'add-menu_item' ) ) {
+
+			if( ! empty( $_POST['menu-item']['-1']['menu-item-url'] ) && in_array( $_POST['menu-item']['-1']['menu-item-url'] ) ) {
+
 				update_post_meta(
 					$menu_item_db_id,
 					'_menu_item_rcmit_type',
 					sanitize_text_field( $_POST['menu-item']['-1']['menu-item-url'] )
 				);
+
 				update_post_meta(
 					$menu_item_db_id,
 					'_menu_item_url',
 					''
 				);
+
 			}
+
 		}
 
 		// Update settings for existing menu items.
-		if ( isset( $_REQUEST['update-nav-menu-nonce'] ) && wp_verify_nonce( $_REQUEST['update-nav-menu-nonce'], 'update-nav_menu' ) ) {
-			if ( ! empty( $_POST['menu-item-button-text'][ $menu_item_db_id ] ) ) {
-				update_post_meta(
-					$menu_item_db_id,
-					'_menu_item_rcmit_button_text',
-					sanitize_text_field( $_POST['menu-item-button-text'][ $menu_item_db_id ] )
-				);
-			}
+		if( isset( $_REQUEST['update-nav-menu-nonce'] ) && wp_verify_nonce( $_REQUEST['update-nav-menu-nonce'], 'update-nav_menu' ) ) {
 
-			if ( ! empty( $_POST['menu-item-shortcode'][ $menu_item_db_id ] ) ) {
+			// Save column width
+			if( ! empty( $_POST['menu-item-column'][ $menu_item_db_id ] ) ) {
 				update_post_meta(
 					$menu_item_db_id,
-					'_menu_item_rcmit_shortcode',
-					sanitize_text_field( $_POST['menu-item-shortcode'][ $menu_item_db_id ] )
-				);
-			}
-
-			if ( ! empty( $_POST['menu-item-column'][ $menu_item_db_id ] ) ) {
-				update_post_meta(
-					$menu_item_db_id,
-					'_menu_item_rcmit_column',
+					'_menu_item_column',
 					sanitize_text_field( $_POST['menu-item-column'][ $menu_item_db_id ] )
 				);
 			}
-
-			if ( ! empty( $_POST['menu-item-heading-level'][ $menu_item_db_id ] ) ) {
+			
+			// Save spacer height
+			if( ! empty( $_POST['menu-item-spacer-height'][ $menu_item_db_id ] ) ) {
 				update_post_meta(
 					$menu_item_db_id,
-					'_menu_item_rcmit_heading_level',
-					sanitize_text_field( $_POST['menu-item-heading-level'][ $menu_item_db_id ] )
+					'_menu_item_spacer_height',
+					sanitize_text_field( $_POST['menu-item-spacer-height'][ $menu_item_db_id ] )
 				);
 			}
+			
+			// Save button url, color, and style
+			if( ! empty( $_POST['menu-item-btn-color'][ $menu_item_db_id ] ) ) {
+				update_post_meta(
+					$menu_item_db_id,
+					'_menu_item_url',
+					sanitize_text_field( $_POST['menu-item-url'][ $menu_item_db_id ] )
+				);
+				update_post_meta(
+					$menu_item_db_id,
+					'_menu_item_btn_color',
+					sanitize_text_field( $_POST['menu-item-btn-color'][ $menu_item_db_id ] )
+				);
+				update_post_meta(
+					$menu_item_db_id,
+					'_menu_item_btn_style',
+					sanitize_text_field( $_POST['menu-item-btn-style'][ $menu_item_db_id ] )
+				);
+			}
+
 		}
 
 	}
