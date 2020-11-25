@@ -140,6 +140,8 @@ class Custom_Menu_Items {
 							<?php _e( 'Width of column', 'custom-menu-item-types' ); ?><br />
 							<select name="menu-item-column[<?php echo $context['item']->ID; ?>]">
 								<option value="col-lg-12" <?php selected( $context['item']->column, 'col-lg-12' ); ?>><?php _e( 'Full', 'custom-menu-item-types' ); ?></option>
+								<option value="col-lg-9" <?php selected( $context['item']->column, 'col-lg-9' ); ?>><?php _e( '3/4', 'custom-menu-item-types' ); ?></option>
+								<option value="col-lg-8" <?php selected( $context['item']->column, 'col-lg-8' ); ?>><?php _e( '2/3', 'custom-menu-item-types' ); ?></option>
 								<option value="col-lg-2" <?php selected( $context['item']->column, 'col-lg-2' ); ?>><?php _e( '1/6', 'custom-menu-item-types' ); ?></option>
 								<option value="col-lg-3" <?php selected( $context['item']->column, 'col-lg-3' ); ?>><?php _e( '1/4', 'custom-menu-item-types' ); ?></option>
 								<option value="col-lg-4" <?php selected( $context['item']->column, 'col-lg-4' ); ?>><?php _e( '1/3', 'custom-menu-item-types' ); ?></option>
